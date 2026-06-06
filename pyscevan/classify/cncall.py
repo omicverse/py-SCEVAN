@@ -320,7 +320,7 @@ def _calling_cn(annot_matrix, extract_segm, truncBoundRight, truncBoundLeft, mea
 # --------------------------------------------------------------------------- #
 # getCNcall  (CNcall.R:283-301)
 # --------------------------------------------------------------------------- #
-def get_cn_call(matrix_seg, count_mtx_annot, breaks, clonal=True, organism="human"):  # noqa: N803
+def get_cn_call(matrix_seg, count_mtx_annot, breaks, clonal=False, organism="human"):  # noqa: N803 — R getCNcall defaults CLONAL=FALSE
     """5-state EM copy-number call.
 
     Parameters
