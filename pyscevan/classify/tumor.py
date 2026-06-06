@@ -37,7 +37,7 @@ from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import pdist
 
 from ..cna import compute_cna_mtx
-from ..segment.vegamc import get_breaks_vegamc, vega_mc_r
+from ..segment.vegamc import breaks_from_starts, vega_mc_r
 from .smooth import nonlinear_smooth
 
 __all__ = ["classify_tumor_cells", "ClassifyResult", "ward_d_cutree2"]
@@ -195,8 +195,15 @@ def classify_tumor_cells(
             axis=1,
         )
         chr_vect = count_mtx_annot["end"].to_numpy()
-        breaks = get_breaks_vegamc(mtx_vega, chr_vect=chr_vect, beta_vega=beta_vega)
+        # Single segmentation: vega_mc_r runs once (with_pvalue=True so segm_alt
+        # below has its bootstrap terms); breaks derive from the SAME seg's
+        # deterministic Start column. Avoids a redundant full vegaMC pass (the
+        # old get_breaks_vegamc re-ran the identical segmentation). bit-exact:
+        # Start is pre-bootstrap, so identical to a with_pvalue=False run.
         seg = vega_mc_r(mtx_vega, beta=beta_vega, with_pvalue=True)
+        breaks = breaks_from_starts(
+            seg["Start"].to_numpy(), np.asarray(chr_vect), len(mtx_vega)
+        )
         # segmAlt = abs(Mean)>0.05 | (G.pv<0.01 | L.pv<0.01). The G.pv/L.pv terms
         # come from a NON-parity bootstrap (see vegamc._bootstrap_pvalues) and so
         # may diverge from R on borderline segments; abs(Mean)>0.05 is

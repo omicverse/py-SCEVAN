@@ -21,7 +21,7 @@ build the full per-segment table first and apply the bp-size filter LAST.
 import numpy as np
 import pandas as pd
 
-from ._vega_core import vega_mc_kernel
+from ._vega_core import _calc_mean_kernel, _calc_std_kernel, vega_mc_kernel
 
 
 def vega_mc_r(
@@ -337,11 +337,13 @@ def _pct_string(frac: float) -> str:
 
 
 def _calc_mean(v: np.ndarray, n: int) -> np.float32:
-    """calc_mean (run_vegaMC.c): sum(v)/n in float32 accumulation."""
-    s = np.float32(0.0)
-    for x in v:
-        s = np.float32(s + x)
-    return np.float32(s / n)
+    """calc_mean (run_vegaMC.c): sum(v)/n in float32 accumulation.
+
+    Delegates to the njit ``_calc_mean_kernel`` (bit-exact float32 sequential
+    sum; see tests/unit/test_vega_kernels.py). Re-wrapped in ``np.float32`` to
+    restore the float32 scalar dtype numba widens on return.
+    """
+    return np.float32(_calc_mean_kernel(v, n))
 
 
 def get_breaks_vegamc(
@@ -369,11 +371,23 @@ def get_breaks_vegamc(
     -------
     np.ndarray of sorted unique 0-based breakpoint indices.
     """
-    chr_vect = np.asarray(chr_vect)
     seg = vega_mc_r(mtx, beta=beta_vega)
-    n = len(mtx)
+    return breaks_from_starts(seg["Start"].to_numpy(), np.asarray(chr_vect), len(mtx))
+
+
+def breaks_from_starts(
+    starts: np.ndarray, chr_vect: np.ndarray, n: int
+) -> np.ndarray:
+    """Map segment Start positions to 0-based breakpoint indices.
+
+    Extracted from ``get_breaks_vegamc`` so a caller that already has the seg
+    table (e.g. classify_tumor_cells, which needs the p-value seg too) can
+    derive breaks WITHOUT re-running ``vega_mc_r`` -- the deterministic ``Start``
+    column is identical regardless of ``with_pvalue`` (the bootstrap touches
+    only L.pv/G.pv). R: ``sort(unique(c(1, which(chr_vect==Start), n)))``.
+    """
     br = []
-    for start in seg["Start"].to_numpy():
+    for start in starts:
         hits = np.where(chr_vect == start)[0]
         if hits.size:
             br.append(int(hits[0]))  # which(...)[1] -> first match, 0-based
@@ -385,18 +399,9 @@ def _calc_std_per_sample(data_chr: np.ndarray, np_chr: int) -> np.ndarray:
 
     calc_std = sqrt( sum (v - mean)^2 / (n-1) ), mean = sum(v)/n, float32
     accumulation; pow/sqrt in float64 then stored float32 (C casts to float).
+
+    Delegates to the njit ``_calc_std_kernel`` (bit-exact float32 sequential
+    accumulation; see tests/unit/test_vega_kernels.py). ``data_chr`` is already
+    C-contiguous at the call site (vegamc.py:113).
     """
-    num_samples = data_chr.shape[0]
-    std = np.empty(num_samples, dtype=np.float32)
-    for j in range(num_samples):
-        v = data_chr[j]
-        s = np.float32(0.0)
-        for x in v:
-            s = np.float32(s + x)
-        m = np.float32(s / np_chr)
-        acc = np.float32(0.0)
-        for x in v:
-            d = np.float32(x - m)
-            acc = np.float32(acc + np.float32(d * d))
-        std[j] = np.float32(np.sqrt(acc / np.float32(np_chr - 1)))
-    return std
+    return _calc_std_kernel(data_chr, np_chr)

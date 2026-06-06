@@ -65,19 +65,27 @@ def nonlinear_smooth(mat: np.ndarray) -> np.ndarray:
     y[1:, :] = y0
     L = n_genes + 1
 
+    # Preallocate scratch reused across all 100 iterations (was re-zeroed every
+    # iter). The two structurally-zero rows -- delta_p[L-1] and delta_m[0] -- are
+    # written 0 once here and never overwritten by the in-place diffs (forward
+    # diff fills [:L-1], backward diff fills [1:L]), exactly reproducing the
+    # per-iter np.zeros. t_d is kept separate from delta_p (no aliasing). Pure
+    # float64, same op order, same tanh -> bit-identical to the alloc-per-iter
+    # form (guarded by tests/unit/test_smooth.py exact equality).
+    delta_p = np.zeros((L, n_cells), dtype=np.float64)
+    t_d = np.empty((L, n_cells), dtype=np.float64)
+    delta_m = np.zeros((L, n_cells), dtype=np.float64)
+
     for _ in range(_NITERS):
-        # DeltaP = (y[2:L] - y[1:(L-1)]) / alpha, then pad a trailing 0 row.
-        delta_p = np.zeros((L, n_cells), dtype=np.float64)
-        delta_p[: L - 1, :] = (y[1:L, :] - y[0 : L - 1, :]) / _ALPHA
-        # last row stays 0 (R: DeltaP <- c(DeltaP, 0))
+        # DeltaP = (y[2:L] - y[1:(L-1)]) / alpha; last row stays 0.
+        np.subtract(y[1:L, :], y[0 : L - 1, :], out=delta_p[: L - 1, :])
+        delta_p[: L - 1, :] /= _ALPHA
 
-        t_d = np.tanh(delta_p)
+        np.tanh(delta_p, out=t_d)
 
-        # DeltaM = tD[2:L] - tD[1:(L-1)], front-padded with a leading 0 row.
-        delta_m = np.zeros((L, n_cells), dtype=np.float64)
-        delta_m[1:L, :] = t_d[1:L, :] - t_d[0 : L - 1, :]
-        # first row stays 0 (R: DeltaM <- c(0, DeltaM))
+        # DeltaM = tD[2:L] - tD[1:(L-1)]; first row stays 0.
+        np.subtract(t_d[1:L, :], t_d[0 : L - 1, :], out=delta_m[1:L, :])
 
-        y = y + _DELTA_T * delta_m
+        y += _DELTA_T * delta_m
 
     return y[1:, :]

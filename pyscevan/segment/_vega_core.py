@@ -324,3 +324,44 @@ def vega_mc_kernel(data, markers_start, beta_value, std, num_samples, weight, we
         jj += 1
 
     return out_start, out_end, out_size, out_mean, n_reg
+
+
+# ----------------------------------------------------------------------------
+# Pre-kernel float32 reductions (calc_std / calc_mean, run_vegaMC.c:666-684).
+# These run BEFORE vega_mc_kernel: the per-chromosome std feeds stop_lambda and
+# DETERMINES breakpoints, so the float32 SEQUENTIAL accumulation order is load-
+# bearing. njit transcribes the exact op sequence of the pure-Python originals
+# (segment/vegamc.py) -- typed float32 accumulator, np.float32() after each op,
+# float32/int -> float64 -> cast for the divisions -- which is the same parity-
+# verified idiom as _update_priority / _init_trivial above. Bit-identical to the
+# pure-Python reference (frozen in tests/unit/test_vega_kernels.py).
+# ----------------------------------------------------------------------------
+@njit(cache=True)
+def _calc_std_kernel(data_chr, np_chr):
+    """Per-sample std over a chromosome (calc_std, run_vegaMC.c:676-684).
+
+    ``data_chr`` shape (num_samples, np_chr) float32. Replicates the float32
+    sequential mean+SSE accumulation op-for-op.
+    """
+    num_samples = data_chr.shape[0]
+    std = np.empty(num_samples, dtype=np.float32)
+    for j in range(num_samples):
+        s = np.float32(0.0)
+        for k in range(np_chr):
+            s = np.float32(s + data_chr[j, k])
+        m = np.float32(s / np_chr)
+        acc = np.float32(0.0)
+        for k in range(np_chr):
+            d = np.float32(data_chr[j, k] - m)
+            acc = np.float32(acc + np.float32(d * d))
+        std[j] = np.float32(np.sqrt(acc / np.float32(np_chr - 1)))
+    return std
+
+
+@njit(cache=True)
+def _calc_mean_kernel(v, n):
+    """sum(v)/n in float32 sequential accumulation (calc_mean, run_vegaMC.c:666)."""
+    s = np.float32(0.0)
+    for k in range(v.shape[0]):
+        s = np.float32(s + v[k])
+    return np.float32(s / n)
