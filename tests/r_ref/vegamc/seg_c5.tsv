@@ -1,0 +1,4 @@
+Chr	Start	End	Size	Mean	L.pv	G.pv	LOH.pv	X..L	X.G	X.LOH	Probe Size	Loss Mean	Gain Mean	LOH Mean	Focal-score Loss	Focal-score Gain	Focal-score LOH
+1	9605704	71726019	62120316	0	1	1	1	0%	0%	0%	20	0	0	0	0	0	0
+1	72934741	137094620	64159880	0.6	1	0.004	1	0%	100%	0%	20	0	0.6	0	0	0.03	0
+1	137815998	197801244	59985247	0	1	1	1	0%	0%	0%	20	0	0	0	0	0	0
