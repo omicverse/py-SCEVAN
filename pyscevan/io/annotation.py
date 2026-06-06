@@ -86,7 +86,10 @@ def _order_match(x, table):
     uses a stable sort for ties (radix on integers), which we mirror with a
     stable argsort. Assumes every x is present in table.
     """
-    pos = {v: i for i, v in enumerate(table)}
+    pos = {}
+    for i, v in enumerate(table):
+        if v not in pos:  # R match() returns the FIRST position (keep first)
+            pos[v] = i
     match = [pos[v] for v in x]
     # stable argsort of match positions
     return sorted(range(len(match)), key=lambda i: match[i])

@@ -66,6 +66,14 @@ def preprocessing_mtx(
     -------
     PreprocessResult(count_mtx_norm, count_mtx_annot).
     """
+    if find_confident:
+        # R calls getConfidentNormalCells (yaGST) here; the MVP only supports
+        # the user-provided-normal path (Phase 1.5 restores auto-detection).
+        raise NotImplementedError(
+            "find_confident=True (getConfidentNormalCells / yaGST) lands in "
+            "Phase 1.5; the MVP requires user-provided normal cells."
+        )
+
     # preProcessing.R:82-89 — 1) filter cells > 200 genes (exact guard).
     # genes.raw = colSums(count_mtx > 0). Removal happens ONLY inside the
     # `if sum(genes.raw < 100) > 1` guard, dropping cells with genes.raw < 200.
