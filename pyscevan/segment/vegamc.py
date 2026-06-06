@@ -103,17 +103,14 @@ def vega_mc_r(
                 f"chromosome at appearance-ordinal {ordinal}: non-finite std "
                 "(empty or degenerate input)."
             )
-        if np.all(std == 0):
-            # Zero-variance input (all probes identical across samples): the C
-            # kernel emits trivial per-probe segments but the R wrapper then
-            # errors ("replacement has 1 row, data has 0"), so this is an
-            # upstream-error case (spec §5, fixture c7z).  Raise rather than
-            # fabricate output.
-            raise ValueError(
-                f"chromosome at appearance-ordinal {ordinal}: zero-variance "
-                "input (std==0 for all samples); upstream SCEVAN errors here."
-            )
-
+        # NB: a zero-variance (flat) chromosome is NOT pre-empted here.  The C
+        # kernel runs it fine (std==0 -> stop==0 -> no merges -> trivial
+        # per-probe segments), which then drop out under the bp-size filter.
+        # Verified against the R oracle: a flat chromosome alongside valid ones
+        # yields segments only for the valid chromosomes, no error (fixture c9).
+        # Whole-input zero variance (every segment filtered -> empty table) is
+        # the genuine upstream-error case and is raised after the filter below
+        # (fixture c7z).
         out_start, out_end, out_size, out_mean, n_reg = vega_mc_kernel(
             data_chr, markers_start, beta_eff, std, num_samples, weight, weight_sum
         )
@@ -152,9 +149,15 @@ def vega_mc_r(
     out = out[out["Size"] > min_region_bp_size].reset_index(drop=True)
 
     if len(out) == 0:
-        # whole-genome empty after filter is fine for tiny inputs; only the
-        # pre-filter empty-segmentation is an error (handled above).
-        pass
+        # Empty table after the strict bp filter: the R wrapper errors here
+        # ("replacement has 1 row, data has 0") because the written file has no
+        # data rows -- e.g. whole-input zero variance (fixture c7z). Raise
+        # rather than fabricate. A single flat chromosome among valid ones is
+        # NOT this case (its trivial segments drop, valid ones remain; c9).
+        raise ValueError(
+            "empty segmentation after min_region_bp_size filter "
+            "(zero-variance / degenerate input; upstream SCEVAN errors here)."
+        )
 
     return out
 

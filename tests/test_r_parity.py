@@ -13,7 +13,7 @@ import pytest
 from pyscevan.segment.vegamc import vega_mc_r
 
 _REF = Path(__file__).parent / "r_ref" / "vegamc"
-_CASES = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"]
+_CASES = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"]
 
 
 @pytest.mark.parametrize("cid", _CASES)
@@ -52,7 +52,7 @@ def test_vegamc_breaks(cid):
     np.testing.assert_allclose(
         seg_py["Mean"].to_numpy(),
         seg_r["Mean"].to_numpy(),
-        atol=1e-4,
+        atol=1e-5,
         err_msg=f"{cid} Mean",
     )
 

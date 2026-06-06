@@ -50,4 +50,13 @@ t2 <- matrix(rnorm(40*5,0,0.15),40,5); t2[10:25,] <- t2[10:25,] + 0.7
 emit("c8", c("c1_g1","c1_g2",paste0("c2_g",1:40)), c(1L,1L,rep(2L,40)),
      c(sort(sample(1:1e6,2)), sort(sample(1:2e8,40))), rbind(t1,t2))
 
+## c9 — partial-flat: flat chr1 (std=0, trivial segs dropped) + valid chr2 (loss block).
+## Proves a single flat chromosome does NOT abort vegaMC (only the valid chr emits);
+## locks the "raise only on whole-output-empty" guard (codex T3 review CONCERN 5).
+set.seed(109)
+c1v <- matrix(0.0, 30, 5)
+c2v <- matrix(rnorm(60*5,0,0.15),60,5); c2v[20:45,] <- c2v[20:45,] - 0.8
+emit("c9", c(paste0("a",1:30),paste0("b",1:60)), c(rep(1L,30),rep(2L,60)),
+     c(sort(sample(1:5e7,30)), sort(sample(1:2e8,60))), rbind(c1v,c2v))
+
 cat("DONE_EXT\n")
