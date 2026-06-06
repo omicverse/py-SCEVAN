@@ -44,7 +44,10 @@ result.cna_matrix   # CNAmat: gene_id/seqnames/end + per-cell relativised CNA bo
 result.clonal_cn    # clonal CN profile: Chr/Pos/End/CN (None when ClonalCN=False)
 ```
 
-## Low-level functional API (mirrors R one-to-one)
+## Low-level functional API (MVP subset)
+
+These ported functions mirror their R counterparts on the MVP path; 7 of the 11
+R `@export`s are not ported (see [NAMESPACE_PARITY.md](NAMESPACE_PARITY.md)).
 
 ```python
 from pyscevan.io.annotation import annotate_genes
@@ -59,26 +62,32 @@ See [NAMESPACE_PARITY.md](NAMESPACE_PARITY.md) for the full R-export → Python 
 
 ## Parity status
 
-These numbers are from the **gated R-parity tests** (`tests/`), measured against
-R SCEVAN run on the **MGH106** sample. They are reported verbatim — `bit-exact`,
-`exact`, and the per-component `atol` figures are the actual measured values, not
-optimistic rounding. **NON-parity** items are flagged explicitly.
+Measured against R SCEVAN on the **MGH106** sample. Two distinct things are
+reported and **must not be conflated**: the **Observed** column is the max
+deviation actually seen on this checkout, while **Test enforces** is the
+tolerance the gated test in `tests/` actually asserts (the test passes anywhere
+within that looser bound — the tight observed value is *not* what is enforced).
+**NON-parity** items are flagged explicitly.
 
-| Component (R → Python) | Parity | Evidence |
+| Component (R → Python) | Observed (this MGH106 checkout) | Test enforces |
 |---|---|---|
-| `getBreaksVegaMC` breakpoints (Chr / Start / End / Size / Probe Size) | **bit-exact** | c1–c9 `array_equal` |
-| `getBreaksVegaMC` segment `Mean` | value-parity, atol ~5e-7 | float32 reduction order (R writes `%f`) |
-| `getBreaksVegaMC` loss/gain % (`X..L` / `X.G`) + `Loss/Gain Mean` | value-parity (exact % strings; Mean atol 1e-4) | c1–c9 |
-| `getBreaksVegaMC` bootstrap p-values (`L.pv` / `G.pv`) | **NON-parity** | C libc `rand()` vs `np.random`; recipe (quantize / `<=` / 5-dp round) matched, but the RNG stream differs → soft-tested only |
-| `annotateGenes` | **identity** (exact gene set + order) | 16570 genes, MGH106 |
-| `preprocessingMtx` (`count_mtx_norm`) | value-parity **7.1e-15** (float64, ~bit-exact) | MGH106 10566 × 200 |
-| EM CN-call (CN labels) | **exact** 60 / 60 | MGH106 clonal |
-| `computeCNAmtx` | value-parity **7.77e-16** | |
-| `classifyTumorCells` `tum_cells` | **exact** 136 / 136 | ward.D via sqrt-trick |
-| `classifyTumorCells` `CNAmat` | value-parity **5.77e-15** | |
-| `pipelineCNA` `classDf` (`class` + `confidentNormal`) | **exact** (136 tumor / 64 normal) | MGH106 |
-| `pipelineCNA` clonal CN (Chr / Pos / End / CN) | **exact** 60 segs | |
-| `nonlinear_smooth` (tanh) | **bit-exact** (0.0) | |
+| `getBreaksVegaMC` breakpoints (Chr / Start / End / Size / Probe Size) | **bit-exact** | `array_equal` (exact), c1–c9 |
+| `getBreaksVegaMC` segment `Mean` | max dev ~5e-7 (float32 reduction order) | `atol=1e-5`, c1–c9 |
+| `getBreaksVegaMC` loss/gain % (`X..L` / `X.G`) + `Loss/Gain Mean` | exact % strings; `Mean` dev <1e-4 | `array_equal` strings + `atol=1e-4`, c1–c9 |
+| `getBreaksVegaMC` bootstrap p-values (`L.pv` / `G.pv`) | **NON-parity** (different RNG stream) | soft only: range [0,1] + direction; **no** equality |
+| `annotateGenes` | **identity** (exact gene set + order), 16570 genes | gene-name set+order `==` + annotation cols equal |
+| `preprocessingMtx` (`count_mtx_norm`) | max dev **7.1e-15** (float64) | `atol=1e-5`, MGH106 10566 × 200 |
+| EM CN-call (CN labels) | **exact** 60 / 60 | `array_equal` (exact) |
+| `computeCNAmtx` | max dev **7.77e-16** | `atol=1e-6` |
+| `classifyTumorCells` `tum_cells` | **exact** 136 / 136 (identity) | identity **or** ARI > 0.95 floor (see divergences) |
+| `classifyTumorCells` `CNAmat` | max dev **5.77e-15** | `atol=1e-4` |
+| `pipelineCNA` `classDf` (`class` + `confidentNormal`) | **exact** (136 tumor / 64 normal) | per-cell `class` `==` + `confidentNormal` set `==` |
+| `pipelineCNA` clonal CN (Chr / Pos / End / CN) | **exact** 60 segs | `array_equal` (exact) |
+| `nonlinear_smooth` (tanh) | **bit-exact** vs a literal R-loop reimplementation (0.0) | `assert_array_equal` in `tests/unit/test_smooth.py` |
+
+> The tight `Observed` figures (e.g. 7e-15) are float64/float32 noise on *this*
+> dataset, not contractual guarantees; the `Test enforces` column is the
+> contract. A future input may sit anywhere within the enforced tolerance.
 
 ### Generating the R reference
 
@@ -122,6 +131,12 @@ are measure-zero or cosmetic.
   pyscevan's `classDf` covers the **analyzed** cells. On MGH106 the per-chr filter
   drops 0 cells, so the two coincide exactly here; for samples that *do* drop
   cells per-chromosome the "filtered" rows would differ. Documented gap.
+  Two further `classDf` literal-parity edge gaps (no effect on MGH106): pyscevan
+  identifies normal cells by excluding the annotation columns *by name*
+  (`Name`/`Chr`/`Position`) rather than R's positional `CNAmat[-(1:3)]` — a cell
+  literally named `Chr` would be mishandled; and `confidentNormal` is filtered to
+  cells present in `classDf` whereas R assigns it directly (differs only if a
+  supplied normal cell was dropped upstream).
 - **Clonal CN omits R's cosmetic `segm.mean` column.** R `getClonalCNProfile`
   `cbind`s a `segm.mean` column read back from the beta=3 vega output;
   pyscevan returns the raw `getCNcall` output (Chr / Pos / End / CN) without it.

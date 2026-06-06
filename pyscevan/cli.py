@@ -43,8 +43,8 @@ def run_h5ad(
     normal_value: str | None = typer.Option(
         None,
         "--normal-value",
-        help="obs[normal_key] value that marks normal "
-        "(default: truthy or =='normal')",
+        help="obs[normal_key] value marking normal (default: bool/numeric "
+        "column = truthy; string column = literal 'normal' label only)",
     ),
     sample: str = typer.Option("sample", "--sample", help="sample label"),
     beta_vega: float = typer.Option(

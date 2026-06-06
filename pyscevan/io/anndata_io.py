@@ -55,8 +55,11 @@ def normal_cells_from_obs(
         Name of the ``obs`` column marking normal cells.
     normal_value
         If given, cells with ``obs[normal_key] == normal_value`` are normal.
-        If ``None``, cells are normal when the value is truthy or equals the
-        string ``"normal"`` (case-insensitive).
+        If ``None``, the rule depends on dtype: a **bool/numeric** column uses
+        truthiness (nonzero == normal); a **string/categorical** column matches
+        only the literal label ``"normal"`` (case-insensitive) -- NOT arbitrary
+        truthiness. For any other label (``"Normal"``, ``"ref"``, ``"immune"``)
+        pass ``normal_value`` explicitly.
 
     Returns
     -------
