@@ -5,3 +5,11 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
+
+# Benchmark data artifacts (large, derived — regenerate via scripts/).
+# Keep the small summaries: metrics.csv, summary.csv, SUMMARY.md, *.png.
+benchmarks/**/r_out/
+benchmarks/**/py_out/
+benchmarks/**/*.tsv.gz
+benchmarks/**/scevan_scratch/
+benchmarks/**/run.log
