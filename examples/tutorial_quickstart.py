@@ -116,17 +116,30 @@ print(f"\nCNA matrix (genes × annotated cells): {result.cna_matrix.shape}")
 print(f"clonal CN segments: {len(result.clonal_cn)}")
 
 # %% [markdown]
-# `result.class_df` is indexed by cell barcode, with a `class` column
-# (`filtered` / `normal` / `tumor`) and a `confidentNormal` flag mirroring R's
-# `classDf`. On this fixture it reproduces the R reference exactly: **136 tumour
-# / 64 normal**.
+# **This is exactly what R SCEVAN returns.** In the SCEVAN vignette,
+# `results <- pipelineCNA(count_mtx, sample="MGH106")` returns a data.frame whose
+# `head(results)` shows, per cell, its `class` (tumor/normal), the
+# `confidentNormal` flag, and — when `SUBCLONES=TRUE` (the R default) — a
+# `subclone` column. `result.class_df` is that same data.frame; on this fixture
+# it reproduces the R reference exactly: **136 tumour / 64 normal**. The
+# `subclone` column is not produced here because the MVP is single-clone
+# (subclone analysis is Phase 2; see `NAMESPACE_PARITY.md`).
+#
+# > **Output delivery — the one structural difference from R.** R `pipelineCNA`
+# > *returns* only `classDf` and *writes* the CNA matrix, gene annotation,
+# > clonal-CN `.seg`, and heatmap PNGs into an `output/` folder as a side effect.
+# > pyscevan instead bundles everything into the returned `SCEVANResult`
+# > (`class_df` + `cna_matrix` + `clonal_cn`) and writes no files — same values,
+# > a more Pythonic, in-memory API.
 
 # %%
 result.class_df.head()
 
 # %% [markdown]
 # The clonal CN profile (`getClonalCNProfile` in R) gives a per-segment integer
-# copy-number call across the genome for the tumour compartment.
+# copy-number call across the genome for the tumour compartment. R writes this to
+# `output/<sample>_Clonal_CN.seg`; `result.clonal_cn` is the same table (Chr / Pos
+# / End / CN). We omit R's cosmetic `segm.mean` column (`pipelineCNA.R:113-114`).
 
 # %%
 result.clonal_cn.head(8)
@@ -178,10 +191,17 @@ print("AnnData path matches DataFrame path (per-cell class):", same)
 # %% [markdown]
 # ## 4. CNA heatmap (chromosome-ordered, normal vs tumour)
 #
+# This is the pyscevan equivalent of the **`MGH106heatmap.png`** that SCEVAN's
+# vignette auto-writes — the CNA matrix heatmap with non-malignant vs malignant
+# cells. SCEVAN renders it inside `pipelineCNA` via `plotCNA` /
+# `plotCNA_withAnnotCells` (ComplexHeatmap); that plotting layer is not ported
+# (Phase 2), so we draw the same view directly from `result.cna_matrix` with
+# matplotlib.
+#
 # `result.cna_matrix` holds the relativised CNA signal: the leading columns are
 # `gene_id / seqnames / end` (gene id, chromosome, position) and the remaining
-# columns are cells. Genes are already in genomic order, so we just split cells
-# into normal/tumour and draw the cells × genes image with chromosome dividers.
+# columns are cells. Genes are already in genomic order, so we split cells into
+# normal/tumour and draw the cells × genes image with chromosome dividers.
 
 # %%
 annot_cols = ["gene_id", "seqnames", "end"]
