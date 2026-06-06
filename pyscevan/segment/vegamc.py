@@ -298,9 +298,13 @@ def _bootstrap_pvalues(
     theta_loss = num_loss_sample.astype(np.float64) / num_seg_regions
     theta_gain = num_gain_sample.astype(np.float64) / num_seg_regions
 
-    # vectorised Bernoulli draws: (bs, num_samples) per channel
-    loss_counts = (rng.random((bs, num_samples)) < theta_loss).sum(axis=1)
-    gain_counts = (rng.random((bs, num_samples)) < theta_gain).sum(axis=1)
+    # vectorised Bernoulli draws, quantized to /1000 with `<=` to mirror C
+    # generate_binomial (run_vegaMC.c:688-693): r = floor(u*1000)/1000; r<=theta.
+    # (Same recipe as C; the RNG stream still differs -> non-parity values.)
+    u_loss = np.floor(rng.random((bs, num_samples)) * 1000.0) / 1000.0
+    u_gain = np.floor(rng.random((bs, num_samples)) * 1000.0) / 1000.0
+    loss_counts = (u_loss <= theta_loss).sum(axis=1)
+    gain_counts = (u_gain <= theta_gain).sum(axis=1)
 
     null_loss = np.bincount(loss_counts, minlength=num_samples + 1).astype(np.float64)
     null_gain = np.bincount(gain_counts, minlength=num_samples + 1).astype(np.float64)
@@ -312,8 +316,9 @@ def _bootstrap_pvalues(
     null_loss /= bs
     null_gain /= bs
 
-    l_pv = null_loss[seg_loss_perc]
-    g_pv = null_gain[seg_gain_perc]
+    # R rounds the p-value columns to 5 decimals (vegaMC.R:63-65).
+    l_pv = np.round(null_loss[seg_loss_perc], 5)
+    g_pv = np.round(null_gain[seg_gain_perc], 5)
     return l_pv, g_pv
 
 
