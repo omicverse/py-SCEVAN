@@ -99,6 +99,37 @@ uv run pytest tests/test_r_parity.py -v
 The Python-side tests `pytest.skip` cleanly when the reference TSVs are absent
 (they do not fail).
 
+## Benchmark — py↔R consistency on 3CA (17 patients)
+
+Beyond the single-sample MGH106 parity above, `benchmarks/` runs the full
+pycopykat-style benchmark across **17 3CA patients** (breast / lung / colorectal
+/ kidney / ovarian, 180–3378 cells). py↔R consistency only — no external truth
+(the 3CA `Malignant` label is itself an algorithm output).
+
+| Dimension | mean | median | min |
+|---|---|---|---|
+| CNA Spearman ρ (py vs R) | **1.0000** | 1.0000 | 1.0000 |
+| Tumour-call ARI (py vs R) | **1.0000** | 1.0000 | 1.0000 |
+| Tumour-call Jaccard (py vs R) | **1.0000** | 1.0000 | 1.0000 |
+| Speedup (R wall-clock / py) | **17.3×** | 18.3× | 9.6× |
+
+Every one of the 17 patients reproduces R exactly (ρ = 1.0, ARI = 1.0, 0
+misclassified cells). The speedup grows with cell count — R's `ward.D`
+clustering is O(n²) — e.g. Qian ovarian patient 11 took R **8.4 h** vs py
+**20 min** (24.7×, the max). See `benchmarks/README.md`, `benchmarks/SUMMARY.md`,
+and `benchmarks/overview_figure.png`.
+
+### Performance
+
+The hot path (vegaMC pre-kernel float32 reductions, the per-chromosome std and
+per-segment mean) runs through numba `@njit` kernels that **bit-exactly**
+reproduce the float32 sequential accumulation order
+(`tests/unit/test_vega_kernels.py`, asserted with `array_equal`, not `allclose`);
+the classification stage also runs the deterministic segmentation once instead
+of twice. `pipeline_cna` on MGH106 drops **21 s → 5 s (4.2×)** with parity
+unchanged. The pure-Python `py3-none-any` wheel is preserved (numba is a
+runtime dep; no binary extensions).
+
 ## Known divergences / limitations
 
 Honest, exhaustive list. The first two are the load-bearing caveats; the rest
