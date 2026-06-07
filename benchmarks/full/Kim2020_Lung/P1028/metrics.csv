@@ -1,0 +1,2 @@
+sam_name,cna_spearman_overall,cna_spearman_cell_mean,cna_spearman_cell_median,cna_spearman_cell_min,n_genes_shared,n_cells_shared,tumor_ari,tumor_jaccard,tumor_overlap,tumor_py_only,tumor_r_only,tumor_n_py,tumor_n_r,py_sec,r_sec,speedup
+Kim2020_Lung__P1028,1.0,1.0,1.0,1.0,6975,4439,1.0,1.0,2475,0,0,2475,2475,459.2488,9131.381,19.88329855189605

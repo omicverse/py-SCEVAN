@@ -1,0 +1,2 @@
+sam_name,cna_spearman_overall,cna_spearman_cell_mean,cna_spearman_cell_median,cna_spearman_cell_min,n_genes_shared,n_cells_shared,tumor_ari,tumor_jaccard,tumor_overlap,tumor_py_only,tumor_r_only,tumor_n_py,tumor_n_r,py_sec,r_sec,speedup
+Lee2020_Colorectal__SMC21,0.9999999999999998,1.0,1.0,1.0,7245,2062,1.0,1.0,1661,0,0,1661,1661,109.0557,2039.481,18.701278337583453

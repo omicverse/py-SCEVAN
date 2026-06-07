@@ -1,0 +1,2 @@
+sam_name,cna_spearman_overall,cna_spearman_cell_mean,cna_spearman_cell_median,cna_spearman_cell_min,n_genes_shared,n_cells_shared,tumor_ari,tumor_jaccard,tumor_overlap,tumor_py_only,tumor_r_only,tumor_n_py,tumor_n_r,py_sec,r_sec,speedup
+Gao2021_Breast__TNBC3,1.0,0.9999999999999998,0.9999999999999999,0.9999999999999999,10472,532,1.0,1.0,180,0,0,180,180,16.805,235.927,14.039095507289497

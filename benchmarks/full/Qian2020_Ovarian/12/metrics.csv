@@ -1,0 +1,2 @@
+sam_name,cna_spearman_overall,cna_spearman_cell_mean,cna_spearman_cell_median,cna_spearman_cell_min,n_genes_shared,n_cells_shared,tumor_ari,tumor_jaccard,tumor_overlap,tumor_py_only,tumor_r_only,tumor_n_py,tumor_n_r,py_sec,r_sec,speedup
+Qian2020_Ovarian__12,0.9999999999999999,1.0,1.0,1.0,8375,2966,1.0,1.0,1221,0,0,1221,1221,292.8286,4703.9,16.063663180440706

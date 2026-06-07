@@ -1,0 +1,2 @@
+sam_name,cna_spearman_overall,cna_spearman_cell_mean,cna_spearman_cell_median,cna_spearman_cell_min,n_genes_shared,n_cells_shared,tumor_ari,tumor_jaccard,tumor_overlap,tumor_py_only,tumor_r_only,tumor_n_py,tumor_n_r,py_sec,r_sec,speedup
+Obradovic2021_Kidney__Patient2,0.9999999999999999,1.0,1.0,1.0,7232,2824,1.0,1.0,710,0,0,710,710,154.9618,3266.617,21.08014362249277
