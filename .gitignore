@@ -6,10 +6,10 @@ build/
 *.egg-info/
 .pytest_cache/
 
-# Benchmark data artifacts (large, derived — regenerate via scripts/).
-# Keep the small summaries: metrics.csv, summary.csv, SUMMARY.md, *.png.
-benchmarks/**/r_out/
-benchmarks/**/py_out/
+# Benchmark data artifacts: keep the SMALL per-patient files (metrics.csv,
+# norm_cell.txt, *_tum_cells.txt, *_runinfo.txt, *_classDf.tsv, summary.csv,
+# SUMMARY.md, *.png) so the benchmark is traceable + self-documenting; exclude
+# only the large derived CNA matrices and scratch (regenerate via scripts/).
 benchmarks/**/*.tsv.gz
 benchmarks/**/scevan_scratch/
 benchmarks/**/run.log

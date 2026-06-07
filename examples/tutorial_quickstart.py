@@ -62,7 +62,9 @@ print("pyscevan version:", getattr(pyscevan, "__version__", "0.1.0.dev0"))
 # Repo root is two levels up from the installed package (works under uv venv).
 REPO_ROOT = Path(pyscevan.__file__).resolve().parents[1]
 FIXTURE = REPO_ROOT / "tests" / "r_ref" / "mgh106"
-print("fixture dir:", FIXTURE)
+# Print the repo-relative path (avoid embedding an absolute local path in the
+# committed, executed notebook).
+print("fixture dir:", FIXTURE.relative_to(REPO_ROOT).as_posix())
 
 # %% [markdown]
 # ## 1. Load the bundled MGH106 fixture

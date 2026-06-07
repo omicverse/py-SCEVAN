@@ -1,0 +1,3 @@
+elapsed_sec=241.8318
+n_tumor=1324
+n_cells=2652
